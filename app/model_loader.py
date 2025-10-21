@@ -37,22 +37,22 @@ class ModelLoader:
     def load_model(self):
         """Упрощенная загрузка модели"""
         try:
-            logger.info("🔄 Загрузка модели...")
+            logger.info("Загрузка модели...")
 
             # Проверяем файлы
             if not os.path.exists("models/cifar10_baseline.pth"):
-                logger.error("❌ Файл модели не найден")
+                logger.error("Файл модели не найден")
                 return False
 
             if not os.path.exists("models/class_names.json"):
-                logger.error("❌ Файл классов не найден")
+                logger.error("Файл классов не найден")
                 return False
 
             # Загружаем классы
             with open("models/class_names.json", 'r') as f:
                 self.class_names = json.load(f)
 
-            logger.info(f"✅ Классы: {self.class_names}")
+            logger.info(f"Классы: {self.class_names}")
 
             # Создаем и загружаем модель
             self.model = SimpleCNN()
@@ -61,11 +61,11 @@ class ModelLoader:
             self.model.eval()
 
             self.is_loaded = True
-            logger.info("✅ Модель загружена успешно!")
+            logger.info("Модель загружена успешно!")
             return True
 
         except Exception as e:
-            logger.error(f"❌ Ошибка: {e}")
+            logger.error(f"Ошибка: {e}")
             return False
 
     def predict(self, image_tensor):

@@ -1,11 +1,13 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from PIL import Image
 import io
 import logging
-import torch
 import torchvision.transforms as transforms
 import asyncio
+
+from starlette.middleware.cors import CORSMiddleware
 
 from app.model_loader import model_loader
 
@@ -13,11 +15,18 @@ from app.model_loader import model_loader
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(
-    title="CIFAR-10 Classification API",
-    description="Простой API для классификации изображений",
-    version="1.0.0"
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
+# ✅ ОБСЛУЖИВАЕМ СТАТИЧЕСКИЕ ФАЙЛЫ
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Простые трансформации
 transform = transforms.Compose([
@@ -30,14 +39,33 @@ transform = transforms.Compose([
 @app.on_event("startup")
 async def startup():
     """Загружаем модель при старте"""
-    logger.info("🚀 Запуск API...")
-    # Загружаем модель синхронно
+    logger.info("Запуск API...")
     model_loader.load_model()
 
 
+# ✅ УДАЛИЛ ВСЕ СТАРЫЕ ЭНДПОИНТЫ И ОСТАВИЛ ТОЛЬКО ЭТОТ
 @app.get("/")
-async def root():
-    return {"status": "OK", "model_loaded": model_loader.is_loaded}
+async def read_root():
+    """Главная страница с веб-интерфейсом"""
+    try:
+        # Читаем HTML файл
+        with open("static/index.html", "r", encoding="utf-8") as f:
+            html_content = f.read()
+        logger.info("HTML интерфейс загружен")
+        return HTMLResponse(content=html_content)
+    except Exception as e:
+        logger.error(f"Ошибка загрузки HTML: {e}")
+        # Если файл не найден, возвращаем простой HTML
+        return HTMLResponse(content="""
+        <html>
+            <head><title>CIFAR-10 Classifier</title></head>
+            <body>
+                <h1>🎯 CIFAR-10 Классификатор изображений</h1>
+                <p>Файл интерфейса не найден. Проверьте что файл static/index.html существует.</p>
+                <p>Ошибка: """ + str(e) + """</p>
+            </body>
+        </html>
+        """)
 
 
 @app.get("/health")
@@ -84,4 +112,4 @@ async def get_classes():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)

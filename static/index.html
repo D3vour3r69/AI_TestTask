@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIFAR-10 Классификатор изображений</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 900px;
+            overflow: hidden;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .upload-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .upload-area {
+            border: 3px dashed #c7d2fe;
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background: #f8faff;
+        }
+
+        .upload-area:hover {
+            border-color: #4f46e5;
+            background: #f0f4ff;
+        }
+
+        .upload-area i {
+            font-size: 3rem;
+            color: #4f46e5;
+            margin-bottom: 15px;
+        }
+
+        .upload-area h3 {
+            color: #4f46e5;
+            margin-bottom: 10px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-button {
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .upload-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(79, 70, 229, 0.4);
+        }
+
+        .analyze-button {
+            background: linear-gradient(90deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .analyze-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .analyze-button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .preview-container {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .preview-container img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .results-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid #4f46e5;
+            display: none;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .result-title {
+            font-size: 1.3rem;
+            color: #1f2937;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .confidence-item {
+            margin-bottom: 15px;
+        }
+
+        .class-name {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .confidence-bar {
+            height: 10px;
+            background: #e5e7eb;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .confidence-level {
+            height: 100%;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            border-radius: 5px;
+            transition: width 1.5s ease-out;
+            width: 0%;
+        }
+
+        .main-prediction {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            border-radius: 15px;
+            margin-top: 10px;
+            display: none;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        .main-prediction h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 5px solid #f3f4f6;
+            border-top: 5px solid #4f46e5;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .file-info {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span>🧠</span> CIFAR-10 Классификатор
+            </h1>
+            <p>AI-классификатор изображений на основе нейросетевой модели</p>
+        </div>
+
+        <div class="content">
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <h3>Перетащите изображение сюда</h3>
+                    <p>или</p>
+                    <label for="fileInput" class="upload-button">Выберите файл</label>
+                    <input type="file" id="fileInput" class="file-input" accept="image/*">
+                    <div class="file-info" id="fileInfo">Файл не выбран</div>
+                </div>
+
+                <button class="analyze-button" id="analyzeButton" disabled>🔍 Анализировать изображение</button>
+
+                <div class="error-message" id="errorMessage">
+                    Произошла ошибка при анализе изображения
+                </div>
+
+                <div class="preview-container" id="previewContainer">
+                    <img id="imagePreview" src="#" alt="Превью">
+                </div>
+            </div>
+
+            <div class="results-section">
+                <div class="loader" id="loader">
+                    <div class="spinner"></div>
+                    <p>Нейросеть анализирует изображение...</p>
+                </div>
+
+                <div class="main-prediction" id="mainPrediction">
+                    <h3 id="predictionText">Результат анализа</h3>
+                    <p id="confidenceValue">Уверенность: 0%</p>
+                </div>
+
+                <div class="result-card" id="resultCard">
+                    <h3 class="result-title">
+                        <span>📊</span> Детализация прогноза
+                    </h3>
+                    <div id="confidenceBars">
+                        <!-- Здесь появятся бары уверенности -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.getElementById('uploadArea');
+            const analyzeButton = document.getElementById('analyzeButton');
+            const previewContainer = document.getElementById('previewContainer');
+            const imagePreview = document.getElementById('imagePreview');
+            const loader = document.getElementById('loader');
+            const mainPrediction = document.getElementById('mainPrediction');
+            const resultCard = document.getElementById('resultCard');
+            const predictionText = document.getElementById('predictionText');
+            const confidenceValue = document.getElementById('confidenceValue');
+            const confidenceBars = document.getElementById('confidenceBars');
+            const fileInfo = document.getElementById('fileInfo');
+            const errorMessage = document.getElementById('errorMessage');
+
+            // Маппинг английских названий классов на русские + эмодзи
+            const classMapping = {
+                'airplane': { name: 'самолет', emoji: '✈️' },
+                'automobile': { name: 'автомобиль', emoji: '🚗' },
+                'bird': { name: 'птица', emoji: '🐦' },
+                'cat': { name: 'кот', emoji: '🐱' },
+                'deer': { name: 'олень', emoji: '🦌' },
+                'dog': { name: 'собака', emoji: '🐶' },
+                'frog': { name: 'лягушка', emoji: '🐸' },
+                'horse': { name: 'лошадь', emoji: '🐴' },
+                'ship': { name: 'корабль', emoji: '🚢' },
+                'truck': { name: 'грузовик', emoji: '🚚' }
+            };
+
+            // Обработчики для drag and drop
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.style.borderColor = '#4f46e5';
+                uploadArea.style.background = '#f0f4ff';
+            });
+
+            uploadArea.addEventListener('dragleave', function() {
+                uploadArea.style.borderColor = '#c7d2fe';
+                uploadArea.style.background = '#f8faff';
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.style.borderColor = '#c7d2fe';
+                uploadArea.style.background = '#f8faff';
+
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileSelection();
+                }
+            });
+
+            // Обработчик выбора файла
+            fileInput.addEventListener('change', handleFileSelection);
+
+            function handleFileSelection() {
+                if (fileInput.files && fileInput.files[0]) {
+                    const file = fileInput.files[0];
+                    fileInfo.textContent = `Выбран файл: ${file.name}`;
+
+                    const reader = new FileReader();
+
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                        previewContainer.style.display = 'block';
+                        analyzeButton.disabled = false;
+                        // Скрываем предыдущие результаты и ошибки
+                        mainPrediction.style.display = 'none';
+                        resultCard.style.display = 'none';
+                        errorMessage.style.display = 'none';
+                    }
+
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            // Обработчик анализа изображения - РЕАЛЬНЫЙ ЗАПРОС К API
+            analyzeButton.addEventListener('click', async function() {
+                if (!fileInput.files[0]) {
+                    showError('Пожалуйста, выберите файл');
+                    return;
+                }
+
+                // Показываем лоадер
+                loader.style.display = 'block';
+                mainPrediction.style.display = 'none';
+                resultCard.style.display = 'none';
+                errorMessage.style.display = 'none';
+
+                try {
+                    const formData = new FormData();
+                    formData.append('image', fileInput.files[0]);
+
+                    // Отправляем запрос к нашему FastAPI
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || 'Ошибка сервера');
+                    }
+
+                    const result = await response.json();
+
+                    // Обрабатываем результат
+                    displayResults(result);
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    showError(`Ошибка: ${error.message}`);
+                } finally {
+                    loader.style.display = 'none';
+                }
+            });
+
+            function displayResults(result) {
+                // Преобразуем уверенность в проценты и сортируем
+                const predictions = result.all_predictions.map(pred => {
+                    const confidencePercent = (pred.confidence * 100).toFixed(1);
+                    const mappedClass = classMapping[pred.class] || {
+                        name: pred.class,
+                        emoji: '❓'
+                    };
+
+                    return {
+                        class: pred.class,
+                        name: mappedClass.name,
+                        emoji: mappedClass.emoji,
+                        confidence: parseFloat(confidencePercent)
+                    };
+                }).sort((a, b) => b.confidence - a.confidence);
+
+                const topPrediction = predictions[0];
+
+                // Показываем главный результат
+                predictionText.textContent = `Это ${topPrediction.emoji} ${topPrediction.name}!`;
+                confidenceValue.textContent = `Уверенность: ${topPrediction.confidence}%`;
+                mainPrediction.style.display = 'block';
+
+                // Показываем детализацию
+                confidenceBars.innerHTML = '';
+                predictions.forEach(pred => {
+                    const item = document.createElement('div');
+                    item.className = 'confidence-item';
+
+                    item.innerHTML = `
+                        <div class="class-name">
+                            <span>${pred.emoji} ${pred.name}</span>
+                            <span>${pred.confidence}%</span>
+                        </div>
+                        <div class="confidence-bar">
+                            <div class="confidence-level" data-confidence="${pred.confidence}"></div>
+                        </div>
+                    `;
+
+                    confidenceBars.appendChild(item);
+                });
+
+                resultCard.style.display = 'block';
+
+                // Анимируем бары уверенности
+                setTimeout(function() {
+                    document.querySelectorAll('.confidence-level').forEach(bar => {
+                        const confidence = bar.getAttribute('data-confidence');
+                        bar.style.width = `${confidence}%`;
+                    });
+                }, 100);
+            }
+
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                loader.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

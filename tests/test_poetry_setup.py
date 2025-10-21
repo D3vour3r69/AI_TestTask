@@ -9,18 +9,18 @@ def test_poetry_environment():
         import numpy as np
         import pandas as pd
 
-        print("✅ Все основные зависимости доступны")
-        print(f"✅ PyTorch: {trch.__version__}")
-        print(f"✅ FastAPI: {fastapi.__version__}")
-        print(f"✅ NumPy: {np.__version__}")
+        print("Все основные зависимости доступны")
+        print(f"PyTorch: {trch.__version__}")
+        print(f"FastAPI: {fastapi.__version__}")
+        print(f"NumPy: {np.__version__}")
 
         # Проверяем что мы в виртуальном окружении poetry
         import sys
-        print(f"✅ Python path: {sys.prefix}")
+        print(f"Python path: {sys.prefix}")
 
         return True
     except ImportError as e:
-        print(f"❌ Ошибка импорта: {e}")
+        print(f"Ошибка импорта: {e}")
         return False
 
 
